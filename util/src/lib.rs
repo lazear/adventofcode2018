@@ -1,7 +1,7 @@
+use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::io::BufReader;
-use std::fs::File;
 use std::path::Path;
 
 pub fn read<P: AsRef<Path>>(path: P) -> io::Result<String> {

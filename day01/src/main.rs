@@ -1,16 +1,6 @@
-use std::io;
-use std::io::prelude::*;
-use std::fs::File;
-use std::path::Path;
-
+extern crate util;
 use std::collections::HashSet;
-
-fn read<P: AsRef<Path>>(path: P) -> io::Result<String> {
-    let mut f = File::open(path)?;
-    let mut buf = String::new();
-    f.read_to_string(&mut buf)?;
-    Ok(buf)
-}
+use std::io;
 
 fn part1(data: &Vec<i64>) -> i64 {
     data.iter().fold(0, |acc, &x| acc + x)
@@ -22,8 +12,8 @@ fn part2(data: &Vec<i64>) -> i64 {
     loop {
         for &x in data {
             if set.contains(&r) {
-                return r
-            } else {                
+                return r;
+            } else {
                 set.insert(r);
                 r += x;
             }
@@ -40,8 +30,12 @@ fn part2_test() {
 }
 
 fn main() -> io::Result<()> {
-    let raw = read("input1.txt")?;
-    let input = raw.split_whitespace().map(|s| s.parse::<i64>().map_err(|_| io::Error::from(io::ErrorKind::InvalidData))).collect::<io::Result<Vec<i64>>>()?;
+    let input = util::read_lines("input.txt")?
+        .iter()
+        .map(|s| {
+            s.parse::<i64>()
+                .map_err(|_| io::Error::from(io::ErrorKind::InvalidData))
+        }).collect::<io::Result<Vec<i64>>>()?;
     println!("Part 1: {:?}", part1(&input));
     println!("Part 2: {:?}", part2(&input));
     Ok(())
