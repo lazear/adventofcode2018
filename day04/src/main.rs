@@ -2,7 +2,6 @@ extern crate util;
 use self::ParseError::*;
 use std::collections::HashMap;
 use std::io;
-use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
 enum Action {
@@ -22,16 +21,10 @@ struct Event {
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
 struct Guard(u16);
 
-#[derive(Debug, Clone)]
-struct Log {
-    guards: HashMap<u16, Guard>,
-    events: HashMap<Guard, Vec<Event>>,
-}
-
 #[derive(Debug, Copy, Clone, PartialEq, PartialOrd, Ord, Eq, Hash)]
 enum ParseError {
-    InvalidDate,
-    InvalidTime,
+    Date,
+    Time,
     InvalidGuard,
     InvalidAction,
 }
@@ -39,8 +32,8 @@ enum ParseError {
 fn date_wrap(date: u16) -> u16 {
     // 1518 is a leap year
     let days = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    let mut month = date / 100;
-    let mut day = date % 100;
+    let month = date / 100;
+    let day = date % 100;
     if day > days[month as usize - 1] {
         ((month + 1) % 12) * 100 + (day - days[month as usize - 1])
     } else {
@@ -55,7 +48,7 @@ fn date_wrap_test() {
     assert_eq!(date_wrap(1232), 0101);
 }
 
-fn parse_log(data: &Vec<String>) -> Result<HashMap<Guard, [u16; 60]>, ParseError> {
+fn parse_log(data: &[String]) -> Result<HashMap<Guard, [u16; 60]>, ParseError> {
     let mut map: HashMap<u16, Vec<Event>> = HashMap::new();
     let mut guards: HashMap<Guard, HashMap<u16, Vec<(i16, Action)>>> = HashMap::new();
 
@@ -70,14 +63,14 @@ fn parse_log(data: &Vec<String>) -> Result<HashMap<Guard, [u16; 60]>, ParseError
             .collect::<Vec<&str>>()
             .join("")
             .parse::<u16>()
-            .map_err(|_| InvalidDate)?;
+            .map_err(|_| Date)?;
         let mut time = line[1]
             .trim_matches(']')
             .split(':')
             .collect::<Vec<&str>>()
             .join("")
             .parse::<i16>()
-            .map_err(|_| InvalidDate)?;
+            .map_err(|_| Time)?;
 
         if time >= 2300 {
             // Should only occur for guard shifts beginning before midnight,
@@ -96,7 +89,7 @@ fn parse_log(data: &Vec<String>) -> Result<HashMap<Guard, [u16; 60]>, ParseError
                     .parse::<u16>()
                     .map_err(|_| InvalidGuard)?,
             )),
-            _ => panic!("Unrecognized log entry!"),
+            _ => return Err(InvalidAction),
         };
 
         let event = Event {
@@ -109,7 +102,7 @@ fn parse_log(data: &Vec<String>) -> Result<HashMap<Guard, [u16; 60]>, ParseError
     }
 
     // Check to make sure we only have 1 guard per day
-    for (k, mut v) in map.iter_mut() {
+    for (_, v) in map.iter() {
         let guard_id = v
             .iter()
             .filter_map(|ev| {
@@ -162,15 +155,15 @@ fn parse_log(data: &Vec<String>) -> Result<HashMap<Guard, [u16; 60]>, ParseError
     Ok(minutes)
 }
 
-fn part1(data: &Vec<String>) -> Result<usize, ParseError> {
+fn part1(data: &[String]) -> Result<usize, ParseError> {
     let minutes = parse_log(data)?;
 
     let mut highest = (0u16, Guard(0), 0usize);
 
     for (&g, clock) in &minutes {
-        let xs = clock.iter().map(|&u| u).collect::<Vec<u16>>();
-        let total: u16 = xs.iter().map(|&u| u).sum();
-        let max = xs.iter().map(|&u| u).max().unwrap();
+        let xs = clock.iter().cloned().collect::<Vec<u16>>();
+        let total: u16 = xs.iter().cloned().sum();
+        let max = xs.iter().cloned().max().ok_or(InvalidAction)?;
         let mut minute = 0;
         for (i, &x) in xs.iter().enumerate() {
             if x == max {
@@ -185,15 +178,14 @@ fn part1(data: &Vec<String>) -> Result<usize, ParseError> {
     Ok(highest.2 * (highest.1).0 as usize)
 }
 
-fn part2(data: &Vec<String>) -> Result<usize, ParseError> {
+fn part2(data: &[String]) -> Result<usize, ParseError> {
     let minutes = parse_log(data)?;
 
     let mut highest = (0u16, Guard(0), 0usize);
 
     for (&g, clock) in &minutes {
-        let xs = clock.iter().map(|&u| u).collect::<Vec<u16>>();
-        let total: u16 = xs.iter().map(|&u| u).sum();
-        let max = xs.iter().map(|&u| u).max().unwrap();
+        let xs = clock.iter().cloned().collect::<Vec<u16>>();
+        let max = xs.iter().cloned().max().ok_or(InvalidAction)?;
         let mut minute = 0;
         for (i, &x) in xs.iter().enumerate() {
             if x == max {
