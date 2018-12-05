@@ -1,12 +1,11 @@
 use std::io;
 extern crate util;
 
-fn part1(data: &Vec<String>) -> i64 {
+fn part1(data: &[String]) -> i64 {
     let mut twos = 0;
     let mut threes = 0;
     for word in data {
         let mut array = [0u8; 26];
-        let mut sum = 0;
         word.chars()
             .for_each(|c| array[(c as usize - 'a' as usize)] += 1);
         twos += array
@@ -21,7 +20,7 @@ fn part1(data: &Vec<String>) -> i64 {
     twos * threes
 }
 
-fn part2(data: &Vec<String>) -> Option<String> {
+fn part2(data: &[String]) -> Option<String> {
     for i in 0..data.len() {
         for j in i + 1..data.len() {
             let x = data[i]
@@ -29,14 +28,16 @@ fn part2(data: &Vec<String>) -> Option<String> {
                 .zip(data[j].chars())
                 .fold(0u8, |acc, (a, b)| acc + if a == b { 0 } else { 1 });
             if x == 1 {
-                return Some(data[i]
-                    .chars()
-                    .zip(data[j].chars())
-                    .filter(|(a, b)| a == b)
-                    .fold(String::new(), |mut acc, (c, _)| {
-                        acc.push(c);
-                        acc
-                    }));
+                return Some(
+                    data[i]
+                        .chars()
+                        .zip(data[j].chars())
+                        .filter(|(a, b)| a == b)
+                        .fold(String::new(), |mut acc, (c, _)| {
+                            acc.push(c);
+                            acc
+                        }),
+                );
             }
         }
     }

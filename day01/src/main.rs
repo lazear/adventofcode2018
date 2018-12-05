@@ -2,11 +2,11 @@ extern crate util;
 use std::collections::HashSet;
 use std::io;
 
-fn part1(data: &Vec<i64>) -> i64 {
-    data.iter().fold(0, |acc, &x| acc + x)
+fn part1(data: &[i64]) -> i64 {
+    data.iter().sum()
 }
 
-fn part2(data: &Vec<i64>) -> i64 {
+fn part2(data: &[i64]) -> i64 {
     let mut set = HashSet::<i64>::new();
     let mut r = 0;
     loop {
@@ -35,7 +35,8 @@ fn main() -> io::Result<()> {
         .map(|s| {
             s.parse::<i64>()
                 .map_err(|_| io::Error::from(io::ErrorKind::InvalidData))
-        }).collect::<io::Result<Vec<i64>>>()?;
+        })
+        .collect::<io::Result<Vec<i64>>>()?;
     println!("Part 1: {:?}", part1(&input));
     println!("Part 2: {:?}", part2(&input));
     Ok(())

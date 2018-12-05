@@ -18,8 +18,8 @@ impl FromStr for Claim {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let mut split = s.split_whitespace();
-        let claim_id = split.next().ok_or(ParseClaimError)?;
-        let _ = split.next().ok_or(ParseClaimError)?;
+        let _claim = split.next().ok_or(ParseClaimError)?;
+        let _at = split.next().ok_or(ParseClaimError)?;
         let coords: Vec<u32> = split
             .next()
             .ok_or(ParseClaimError)?
@@ -55,7 +55,7 @@ fn claim_parse_test() {
     );
 }
 
-fn part1(data: &Vec<String>) -> Result<usize, ParseClaimError> {
+fn part1(data: &[String]) -> Result<usize, ParseClaimError> {
     let claims = data
         .iter()
         .map(|x| x.parse::<Claim>())
@@ -71,11 +71,10 @@ fn part1(data: &Vec<String>) -> Result<usize, ParseClaimError> {
             }
         }
     }
-    let size = grid.iter().filter(|&x| *x > 1).collect::<Vec<_>>().len();
-    Ok(size)
+    Ok(grid.iter().filter(|&x| *x > 1).count())
 }
 
-fn part2(data: &Vec<String>) -> Result<Option<usize>, ParseClaimError> {
+fn part2(data: &[String]) -> Result<Option<usize>, ParseClaimError> {
     let claims = data
         .iter()
         .map(|x| x.parse::<Claim>())
