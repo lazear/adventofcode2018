@@ -31,7 +31,7 @@ impl FromStr for Coord {
 }
 
 impl Coord {
-    fn distance(&self, other: &Coord) -> i32 {
+    fn distance(self, other: Coord) -> i32 {
         (self.x - other.x).abs() + (self.y - other.y).abs()
     }
 }
@@ -58,7 +58,7 @@ fn part1(data: &[String]) -> Result<usize, CoordError> {
     for x in min.x..=max.x {
         for y in min.y..=max.y {
             let c = Coord { x, y };
-            let s = coords.iter().map(|x| c.distance(x)).collect::<Vec<i32>>();
+            let s = coords.iter().map(|x| x.distance(c)).collect::<Vec<i32>>();
             let m = s.iter().min().ok_or(CoordError::InvalidData)?;
             let idx = s
                 .iter()
@@ -71,7 +71,7 @@ fn part1(data: &[String]) -> Result<usize, CoordError> {
                 if x == min.x || x == max.x || y == min.y || y == max.y {
                     infinite[idx[0]] = false;
                 }
-            } else if idx.len() == 0 {
+            } else if idx.is_empty() {
                 return Err(CoordError::InvalidData);
             }
         }
@@ -107,7 +107,7 @@ fn part2(data: &[String], cutoff: i32) -> Result<usize, CoordError> {
     for x in min.x..=max.x {
         for y in min.y..=max.y {
             let c = Coord { x, y };
-            let s = coords.iter().map(|x| c.distance(x)).collect::<Vec<i32>>();
+            let s = coords.iter().map(|x| x.distance(c)).collect::<Vec<i32>>();
             if s.iter().sum::<i32>() < cutoff {
                 safe_region.push(c);
             }
