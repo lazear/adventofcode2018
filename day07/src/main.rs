@@ -38,8 +38,16 @@ fn parse_graph(data: &[String]) -> Option<HashMap<char, Node>> {
     let mut graph: HashMap<char, Node> = HashMap::new();
 
     for (i, o) in v {
-        graph.entry(i).or_insert(Node::new(i)).outgoing.push(o);
-        graph.entry(o).or_insert(Node::new(o)).incoming.push(i);
+        graph
+            .entry(i)
+            .or_insert_with(|| Node::new(i))
+            .outgoing
+            .push(o);
+        graph
+            .entry(o)
+            .or_insert_with(|| Node::new(o))
+            .incoming
+            .push(i);
     }
     Some(graph)
 }
@@ -52,7 +60,7 @@ fn part1(data: &[String]) -> Option<String> {
     let mut ready: HashSet<char> = graph
         .iter()
         .filter_map(|(id, node)| {
-            if node.incoming.len() == 0 {
+            if node.incoming.is_empty() {
                 Some(*id)
             } else {
                 None
@@ -60,38 +68,33 @@ fn part1(data: &[String]) -> Option<String> {
         })
         .collect();
 
-    'outer: loop {
-        if ready.len() == 0 {
-            break;
-        }
+    while !ready.is_empty() {
         // Alphabetically sort our list of ready steps
         let mut available = ready.iter().cloned().collect::<Vec<char>>();
         available.sort();
-
-        for a in &available {
-            let node = graph.get(a)?;
-            for child_id in &node.outgoing {
-                if steps.contains(child_id) {
-                    // we've already done this child
-                    continue;
-                }
-                if graph
-                    .get(child_id)?
-                    .incoming
-                    .iter()
-                    .filter(|id| !(steps.contains(id) || *id == a))
-                    .count()
-                    == 0
-                {
-                    ready.insert(*child_id);
-                }
+        let a = available.get(0)?;
+        let node = graph.get(a)?;
+        for child_id in &node.outgoing {
+            if steps.contains(child_id) {
+                // we've already done this child
+                continue;
             }
-            ready.remove(a);
-            steps.push(*a);
-            // Continue to the outer loop, because this child node becoming ready
-            // may allow other nodes that have alphabetic priority to become ready
-            continue 'outer;
+            // Check if any children are ready
+            if graph
+                .get(child_id)?
+                .incoming
+                .iter()
+                .filter(|id| !(steps.contains(id) || *id == a))
+                .count()
+                == 0
+            {
+                ready.insert(*child_id);
+            }
         }
+        ready.remove(a);
+        steps.push(*a);
+        // Continue to the outer loop, because this child node becoming ready
+        // may allow other nodes that have alphabetic priority to become ready
     }
     Some(steps.iter().cloned().collect::<String>())
 }
@@ -106,7 +109,7 @@ fn part2(data: &[String], workers: usize, additional: u32) -> Option<u32> {
     let mut ready: HashSet<char> = graph
         .iter()
         .filter_map(|(id, node)| {
-            if node.incoming.len() == 0 {
+            if node.incoming.is_empty() {
                 Some(*id)
             } else {
                 None
@@ -117,9 +120,7 @@ fn part2(data: &[String], workers: usize, additional: u32) -> Option<u32> {
     let mut remaining = graph.keys().cloned().collect::<HashSet<char>>();
     let mut ticks = 0;
     let mut done: Vec<char> = Vec::new();
-    let mut jobs = (0..workers + 1)
-        .map(|_| Job::default())
-        .collect::<Vec<Job>>();
+    let mut jobs = (0..=workers).map(|_| Job::default()).collect::<Vec<Job>>();
 
     // Outer loop represents 1 second of work
     let mut queue: VecDeque<char> = VecDeque::new();
@@ -132,70 +133,60 @@ fn part2(data: &[String], workers: usize, additional: u32) -> Option<u32> {
                 job.clock -= 1;
             } else {
                 // Did we just finish a job?
-                match job.letter.take() {
+                if let Some(c) = job.letter.take() {
                     // We had a job to work on, just finished
-                    Some(c) => {
-                        let node = graph.get(&c)?;
-                        // Are any of our direct outgoing nodes now available to work on?
-                        for child_id in &node.outgoing {
-                            if done.contains(child_id) {
-                                // we've already done this child
-                                continue;
-                            }
-                            if graph
-                                .get(child_id)?
-                                .incoming
-                                .iter()
-                                .filter(|id| !(done.contains(id) || *id == &c))
-                                .count()
-                                == 0
-                            {
-                                ready.insert(*child_id);
-                            }
+                    let node = graph.get(&c)?;
+                    // Are any of our direct outgoing nodes now available to work on?
+                    for child_id in &node.outgoing {
+                        if done.contains(child_id) {
+                            // we've already done this child
+                            continue;
                         }
-                        done.push(c);
-                        remaining.remove(&c);
-                        job.letter = None;
+                        if graph
+                            .get(child_id)?
+                            .incoming
+                            .iter()
+                            .filter(|id| !(done.contains(id) || *id == &c))
+                            .count()
+                            == 0
+                        {
+                            ready.insert(*child_id);
+                        }
                     }
-                    // No previous job, we've been idle
-                    None => (),
+                    done.push(c);
+                    remaining.remove(&c);
+                    job.letter = None;
                 }
             }
+        }
+
+        // There are ready jobs that need to be added to the queue.
+        if !ready.is_empty() {
+            let mut available = ready.iter().cloned().collect::<Vec<char>>();
+            available.sort_by(|&a, &b| duration(a, additional).cmp(&duration(b, additional)));
+            queue.extend(VecDeque::from(available));
+            ready.clear();
         }
 
         for job in jobs.iter_mut() {
-            // There are ready jobs in the queue.
-            if !ready.is_empty() {
-                let mut available = ready.iter().cloned().collect::<Vec<char>>();
-                available.sort_by(|&a, &b| duration(a, additional).cmp(&duration(b, additional)));
-                queue.extend(VecDeque::from(available));
-                ready.clear();
-            }
-
             // Take a job if we don't have one.
             if job.letter.is_none() {
                 job.letter = queue.pop_front();
-                match job.letter {
-                    // Start a new job
-                    Some(c) => {
-                        // println!("{}:#{} taking {}", ticks,i,c);
-                        job.clock = duration(c, additional);
-                        ready.remove(&c);
-                    }
-                    // Stay idle
-                    None => (),
+                if let Some(c) = job.letter {
+                    job.clock = duration(c, additional);
+                    ready.remove(&c);
                 }
             }
         }
 
-        println!(
-            "{:04} {:?} {}",
-            ticks,
-            jobs.iter()
-                .map(|j| j.letter.unwrap_or('.'))
-                .collect::<Vec<_>>(),
-            done.iter().cloned().collect::<String>()
-        );
+        // println!(
+        //     "{:04} {:?} {}",
+        //     ticks,
+        //     jobs.iter()
+        //         .map(|j| j.letter.unwrap_or('.'))
+        //         .collect::<Vec<_>>(),
+        //     done.iter().cloned().collect::<String>()
+        // );
 
         if remaining.is_empty() {
             break;
