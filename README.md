@@ -1,3 +1,5 @@
 # adventofcode2018
 
-Solutions to https://adventofcode.com/2018 in Rust
+![advent](pic.png)
+
+Solutions to https://adventofcode.com/2018 in Rust.
