@@ -6,4 +6,3 @@ edition = "2018"
 
 [dependencies]
 util = { path = "../util" }
-image = "0.20"
